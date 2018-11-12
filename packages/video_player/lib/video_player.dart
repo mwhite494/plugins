@@ -179,7 +179,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
 
   final String package;
   Timer _timer;
-  bool _isDisposed = false;
+  bool isDisposed = false;
   Completer<void> _creatingCompleter;
   StreamSubscription<dynamic> _eventSubscription;
   _VideoAppLifeCycleObserver _lifeCycleObserver;
@@ -274,8 +274,8 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   Future<void> dispose() async {
     if (_creatingCompleter != null) {
       await _creatingCompleter.future;
-      if (!_isDisposed) {
-        _isDisposed = true;
+      if (!isDisposed) {
+        isDisposed = true;
         _timer?.cancel();
         await _eventSubscription?.cancel();
         await _channel.invokeMethod(
@@ -285,7 +285,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
       }
       _lifeCycleObserver.dispose();
     }
-    _isDisposed = true;
+    isDisposed = true;
     super.dispose();
   }
 
@@ -305,7 +305,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   }
 
   Future<void> _applyLooping() async {
-    if (!value.initialized || _isDisposed) {
+    if (!value.initialized || isDisposed) {
       return;
     }
     _channel.invokeMethod(
@@ -315,7 +315,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   }
 
   Future<void> _applyPlayPause() async {
-    if (!value.initialized || _isDisposed) {
+    if (!value.initialized || isDisposed) {
       return;
     }
     if (value.isPlaying) {
@@ -326,11 +326,11 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
       _timer = Timer.periodic(
         const Duration(milliseconds: 500),
         (Timer timer) async {
-          if (_isDisposed) {
+          if (isDisposed) {
             return;
           }
           final Duration newPosition = await position;
-          if (_isDisposed) {
+          if (isDisposed) {
             return;
           }
           value = value.copyWith(position: newPosition);
@@ -346,7 +346,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   }
 
   Future<void> _applyVolume() async {
-    if (!value.initialized || _isDisposed) {
+    if (!value.initialized || isDisposed) {
       return;
     }
     await _channel.invokeMethod(
@@ -357,7 +357,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
 
   /// The position in the current video.
   Future<Duration> get position async {
-    if (_isDisposed) {
+    if (isDisposed) {
       return null;
     }
     return Duration(
@@ -369,7 +369,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
   }
 
   Future<void> seekTo(Duration moment) async {
-    if (_isDisposed) {
+    if (isDisposed) {
       return;
     }
     if (moment > value.duration) {
