@@ -470,7 +470,9 @@ class _VideoPlayerState extends State<VideoPlayer> {
   @override
   void deactivate() {
     super.deactivate();
-    widget.controller.removeListener(_listener);
+    if (!widget.controller?.isDisposed ?? false) {
+      widget.controller.removeListener(_listener);
+    }
   }
 
   @override
@@ -600,7 +602,9 @@ class _VideoProgressIndicatorState extends State<VideoProgressIndicator> {
 
   @override
   void deactivate() {
-    controller.removeListener(listener);
+    if (!controller?.isDisposed ?? false) {
+      controller.removeListener(listener);
+    }
     super.deactivate();
   }
 
