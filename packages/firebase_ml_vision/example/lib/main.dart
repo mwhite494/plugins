@@ -11,17 +11,17 @@ import 'package:image_picker/image_picker.dart';
 
 import 'detector_painters.dart';
 
-void main() => runApp(new MaterialApp(home: _MyHomePage()));
+void main() => runApp(MaterialApp(home: _MyHomePage()));
 
 class _MyHomePage extends StatefulWidget {
   @override
-  _MyHomePageState createState() => new _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<_MyHomePage> {
   File _imageFile;
   Size _imageSize;
-  List<dynamic> _scanResults;
+  dynamic _scanResults;
   Detector _currentDetector = Detector.text;
 
   Future<void> _getAndScanImage() async {
@@ -44,9 +44,9 @@ class _MyHomePageState extends State<_MyHomePage> {
   }
 
   Future<void> _getImageSize(File imageFile) async {
-    final Completer<Size> completer = new Completer<Size>();
+    final Completer<Size> completer = Completer<Size>();
 
-    final Image image = new Image.file(imageFile);
+    final Image image = Image.file(imageFile);
     image.image.resolve(const ImageConfiguration()).addListener(
       (ImageInfo info, bool _) {
         completer.complete(Size(
@@ -70,68 +70,73 @@ class _MyHomePageState extends State<_MyHomePage> {
     final FirebaseVisionImage visionImage =
         FirebaseVisionImage.fromFile(imageFile);
 
-    FirebaseVisionDetector detector;
+    dynamic results;
     switch (_currentDetector) {
       case Detector.barcode:
-        detector = FirebaseVision.instance.barcodeDetector();
+        final BarcodeDetector detector =
+            FirebaseVision.instance.barcodeDetector();
+        results = await detector.detectInImage(visionImage);
         break;
       case Detector.face:
-        detector = FirebaseVision.instance.faceDetector();
+        final FaceDetector detector = FirebaseVision.instance.faceDetector();
+        results = await detector.processImage(visionImage);
         break;
       case Detector.label:
-        detector = FirebaseVision.instance.labelDetector();
+        final LabelDetector detector = FirebaseVision.instance.labelDetector();
+        results = await detector.detectInImage(visionImage);
         break;
       case Detector.cloudLabel:
-        detector = FirebaseVision.instance.cloudLabelDetector();
+        final CloudLabelDetector detector =
+            FirebaseVision.instance.cloudLabelDetector();
+        results = await detector.detectInImage(visionImage);
         break;
       case Detector.text:
-        detector = FirebaseVision.instance.textDetector();
+        final TextRecognizer recognizer =
+            FirebaseVision.instance.textRecognizer();
+        results = await recognizer.processImage(visionImage);
         break;
       default:
         return;
     }
-
-    final List<dynamic> results =
-        await detector.detectInImage(visionImage) ?? <dynamic>[];
 
     setState(() {
       _scanResults = results;
     });
   }
 
-  CustomPaint _buildResults(Size imageSize, List<dynamic> results) {
+  CustomPaint _buildResults(Size imageSize, dynamic results) {
     CustomPainter painter;
 
     switch (_currentDetector) {
       case Detector.barcode:
-        painter = new BarcodeDetectorPainter(_imageSize, results);
+        painter = BarcodeDetectorPainter(_imageSize, results);
         break;
       case Detector.face:
-        painter = new FaceDetectorPainter(_imageSize, results);
+        painter = FaceDetectorPainter(_imageSize, results);
         break;
       case Detector.label:
-        painter = new LabelDetectorPainter(_imageSize, results);
+        painter = LabelDetectorPainter(_imageSize, results);
         break;
       case Detector.cloudLabel:
-        painter = new LabelDetectorPainter(_imageSize, results);
+        painter = LabelDetectorPainter(_imageSize, results);
         break;
       case Detector.text:
-        painter = new TextDetectorPainter(_imageSize, results);
+        painter = TextDetectorPainter(_imageSize, results);
         break;
       default:
         break;
     }
 
-    return new CustomPaint(
+    return CustomPaint(
       painter: painter,
     );
   }
 
   Widget _buildImage() {
-    return new Container(
+    return Container(
       constraints: const BoxConstraints.expand(),
-      decoration: new BoxDecoration(
-        image: new DecorationImage(
+      decoration: BoxDecoration(
+        image: DecorationImage(
           image: Image.file(_imageFile).image,
           fit: BoxFit.fill,
         ),
@@ -152,11 +157,11 @@ class _MyHomePageState extends State<_MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
+    return Scaffold(
+      appBar: AppBar(
         title: const Text('ML Vision Example'),
         actions: <Widget>[
-          new PopupMenuButton<Detector>(
+          PopupMenuButton<Detector>(
             onSelected: (Detector result) {
               _currentDetector = result;
               if (_imageFile != null) _scanImage(_imageFile);
@@ -189,7 +194,7 @@ class _MyHomePageState extends State<_MyHomePage> {
       body: _imageFile == null
           ? const Center(child: Text('No image selected.'))
           : _buildImage(),
-      floatingActionButton: new FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
         onPressed: _getAndScanImage,
         tooltip: 'Pick Image',
         child: const Icon(Icons.add_a_photo),

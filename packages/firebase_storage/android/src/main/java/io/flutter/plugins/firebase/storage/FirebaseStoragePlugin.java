@@ -5,8 +5,8 @@
 package io.flutter.plugins.firebase.storage;
 
 import android.net.Uri;
-import android.support.annotation.NonNull;
 import android.util.SparseArray;
+import androidx.annotation.NonNull;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -285,6 +285,7 @@ public class FirebaseStoragePlugin implements MethodCallHandler {
     builder.setContentLanguage((String) map.get("contentLanguage"));
     builder.setContentType((String) map.get("contentType"));
 
+    @SuppressWarnings("unchecked")
     Map<String, String> customMetadata = (Map<String, String>) map.get("customMetadata");
     if (customMetadata != null) {
       for (String key : customMetadata.keySet()) {

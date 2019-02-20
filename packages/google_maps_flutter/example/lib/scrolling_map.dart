@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -27,10 +28,10 @@ class ScrollingMapBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: <Widget>[
-        new Card(
-          child: new Padding(
+        Card(
+          child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 30.0),
-            child: new Column(
+            child: Column(
               children: <Widget>[
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12.0),
@@ -42,15 +43,16 @@ class ScrollingMapBody extends StatelessWidget {
                     height: 300.0,
                     child: GoogleMap(
                       onMapCreated: onMapCreated,
-                      options: new GoogleMapOptions(
-                        cameraPosition: CameraPosition(
-                          target: center,
-                          zoom: 11.0,
-                        ),
+                      initialCameraPosition: CameraPosition(
+                        target: center,
+                        zoom: 11.0,
                       ),
-                      gestureRecognizers: <OneSequenceGestureRecognizer>[
-                        new EagerGestureRecognizer()
-                      ],
+                      gestureRecognizers:
+                          <Factory<OneSequenceGestureRecognizer>>[
+                        Factory<OneSequenceGestureRecognizer>(
+                          () => EagerGestureRecognizer(),
+                        ),
+                      ].toSet(),
                     ),
                   ),
                 ),
@@ -58,10 +60,10 @@ class ScrollingMapBody extends StatelessWidget {
             ),
           ),
         ),
-        new Card(
-          child: new Padding(
+        Card(
+          child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 30.0),
-            child: new Column(
+            child: Column(
               children: <Widget>[
                 const Text('This map doesn\'t consume the vertical drags.'),
                 const Padding(
@@ -75,15 +77,16 @@ class ScrollingMapBody extends StatelessWidget {
                     height: 300.0,
                     child: GoogleMap(
                       onMapCreated: onMapCreated,
-                      options: new GoogleMapOptions(
-                        cameraPosition: CameraPosition(
-                          target: center,
-                          zoom: 11.0,
-                        ),
+                      initialCameraPosition: CameraPosition(
+                        target: center,
+                        zoom: 11.0,
                       ),
-                      gestureRecognizers: <OneSequenceGestureRecognizer>[
-                        ScaleGestureRecognizer()
-                      ],
+                      gestureRecognizers:
+                          <Factory<OneSequenceGestureRecognizer>>[
+                        Factory<OneSequenceGestureRecognizer>(
+                          () => ScaleGestureRecognizer(),
+                        ),
+                      ].toSet(),
                     ),
                   ),
                 ),

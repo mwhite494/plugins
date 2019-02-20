@@ -7,11 +7,6 @@ part of firebase_storage;
 /// FirebaseStorage is a service that supports uploading and downloading large
 /// objects to Google Cloud Storage.
 class FirebaseStorage {
-  static const MethodChannel channel =
-      MethodChannel('plugins.flutter.io/firebase_storage');
-
-  static bool _initialized = false;
-
   /// Returns the [FirebaseStorage] instance, initialized with a custom
   /// [FirebaseApp] if [app] is specified and a custom Google Cloud Storage
   /// bucket if [storageBucket] is specified. Otherwise the instance will be
@@ -32,7 +27,12 @@ class FirebaseStorage {
     _initialized = true;
   }
 
-  static FirebaseStorage _instance = new FirebaseStorage();
+  static const MethodChannel channel =
+      MethodChannel('plugins.flutter.io/firebase_storage');
+
+  static bool _initialized = false;
+
+  static FirebaseStorage _instance = FirebaseStorage();
 
   /// The [FirebaseApp] instance to which this [FirebaseStorage] belongs.
   ///
@@ -50,14 +50,17 @@ class FirebaseStorage {
 
   /// Used to dispatch method calls
   static final StreamController<MethodCall> _methodStreamController =
-      new StreamController<MethodCall>.broadcast(); // ignore: close_sinks
+      StreamController<MethodCall>.broadcast(); // ignore: close_sinks
   Stream<MethodCall> get _methodStream => _methodStreamController.stream;
 
   /// Creates a new [StorageReference] initialized at the root
   /// Firebase Storage location.
-  StorageReference ref() => new StorageReference._(const <String>[], this);
+  StorageReference ref() => StorageReference._(const <String>[], this);
 
   Future<int> getMaxDownloadRetryTimeMillis() async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     return await channel.invokeMethod(
         "FirebaseStorage#getMaxDownloadRetryTime", <String, dynamic>{
       'app': app?.name,
@@ -66,6 +69,9 @@ class FirebaseStorage {
   }
 
   Future<int> getMaxUploadRetryTimeMillis() async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     return await channel.invokeMethod(
         "FirebaseStorage#getMaxUploadRetryTime", <String, dynamic>{
       'app': app?.name,
@@ -74,6 +80,9 @@ class FirebaseStorage {
   }
 
   Future<int> getMaxOperationRetryTimeMillis() async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     return await channel.invokeMethod(
         "FirebaseStorage#getMaxOperationRetryTime", <String, dynamic>{
       'app': app?.name,
@@ -82,6 +91,9 @@ class FirebaseStorage {
   }
 
   Future<void> setMaxDownloadRetryTimeMillis(int time) {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     return channel.invokeMethod(
         "FirebaseStorage#setMaxDownloadRetryTime", <String, dynamic>{
       'app': app?.name,
@@ -91,6 +103,9 @@ class FirebaseStorage {
   }
 
   Future<void> setMaxUploadRetryTimeMillis(int time) {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     return channel.invokeMethod(
         "FirebaseStorage#setMaxUploadRetryTime", <String, dynamic>{
       'app': app?.name,
@@ -100,6 +115,9 @@ class FirebaseStorage {
   }
 
   Future<void> setMaxOperationRetryTimeMillis(int time) {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     return channel.invokeMethod(
         "FirebaseStorage#setMaxOperationRetryTime", <String, dynamic>{
       'app': app?.name,
@@ -111,13 +129,16 @@ class FirebaseStorage {
 
 /// TODO: Move into own file and build out progress functionality
 class StorageFileDownloadTask {
+  StorageFileDownloadTask._(this._firebaseStorage, this._path, this._file);
+
   final FirebaseStorage _firebaseStorage;
   final String _path;
   final File _file;
 
-  StorageFileDownloadTask._(this._firebaseStorage, this._path, this._file);
-
   Future<void> _start() async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     final int totalByteCount = await FirebaseStorage.channel.invokeMethod(
       "StorageReference#writeToFile",
       <String, dynamic>{
@@ -128,11 +149,11 @@ class StorageFileDownloadTask {
       },
     );
     _completer
-        .complete(new FileDownloadTaskSnapshot(totalByteCount: totalByteCount));
+        .complete(FileDownloadTaskSnapshot(totalByteCount: totalByteCount));
   }
 
   Completer<FileDownloadTaskSnapshot> _completer =
-      new Completer<FileDownloadTaskSnapshot>();
+      Completer<FileDownloadTaskSnapshot>();
   Future<FileDownloadTaskSnapshot> get future => _completer.future;
 }
 

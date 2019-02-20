@@ -24,26 +24,32 @@ class FirebaseApp {
   /// This getter is asynchronous because apps can also be configured by native
   /// code.
   Future<FirebaseOptions> get options async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     final Map<dynamic, dynamic> app = await channel.invokeMethod(
       'FirebaseApp#appNamed',
       name,
     );
     assert(app != null);
-    return new FirebaseOptions.from(app['options']);
+    return FirebaseOptions.from(app['options']);
   }
 
   /// Returns a previously created FirebaseApp instance with the given name,
   /// or null if no such app exists.
   static Future<FirebaseApp> appNamed(String name) async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     final Map<dynamic, dynamic> app = await channel.invokeMethod(
       'FirebaseApp#appNamed',
       name,
     );
-    return app == null ? null : new FirebaseApp(name: app['name']);
+    return app == null ? null : FirebaseApp(name: app['name']);
   }
 
   /// Returns the default (first initialized) instance of the FirebaseApp.
-  static final FirebaseApp instance = new FirebaseApp(name: defaultAppName);
+  static final FirebaseApp instance = FirebaseApp(name: defaultAppName);
 
   /// Configures an app with the given [name] and [options].
   ///
@@ -66,22 +72,28 @@ class FirebaseApp {
       assert(await existingApp.options == options);
       return existingApp;
     }
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     await channel.invokeMethod(
       'FirebaseApp#configure',
       <String, dynamic>{'name': name, 'options': options.asMap},
     );
-    return new FirebaseApp(name: name);
+    return FirebaseApp(name: name);
   }
 
   /// Returns a list of all extant FirebaseApp instances, or null if there are
   /// no FirebaseApp instances.
   static Future<List<FirebaseApp>> allApps() async {
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     final List<dynamic> result = await channel.invokeMethod(
       'FirebaseApp#allApps',
     );
     return result
         ?.map<FirebaseApp>(
-          (dynamic app) => new FirebaseApp(name: app['name']),
+          (dynamic app) => FirebaseApp(name: app['name']),
         )
         ?.toList();
   }

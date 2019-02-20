@@ -24,8 +24,7 @@ class RemoteConfig extends ChangeNotifier {
   LastFetchStatus get lastFetchStatus => _lastFetchStatus;
   RemoteConfigSettings get remoteConfigSettings => _remoteConfigSettings;
 
-  static Completer<RemoteConfig> _instanceCompleter =
-      new Completer<RemoteConfig>();
+  static Completer<RemoteConfig> _instanceCompleter = Completer<RemoteConfig>();
 
   /// Gets the instance of RemoteConfig for the default Firebase app.
   static Future<RemoteConfig> get instance async {
@@ -37,16 +36,19 @@ class RemoteConfig extends ChangeNotifier {
 
   static void _getRemoteConfigInstance() async {
     final Map<dynamic, dynamic> properties =
+        // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+        // https://github.com/flutter/flutter/issues/26431
+        // ignore: strong_mode_implicit_dynamic_method
         await channel.invokeMethod('RemoteConfig#instance');
 
-    final RemoteConfig instance = new RemoteConfig();
+    final RemoteConfig instance = RemoteConfig();
 
     instance._lastFetchTime =
-        new DateTime.fromMillisecondsSinceEpoch(properties['lastFetchTime']);
+        DateTime.fromMillisecondsSinceEpoch(properties['lastFetchTime']);
     instance._lastFetchStatus =
         _parseLastFetchStatus(properties['lastFetchStatus']);
     final RemoteConfigSettings remoteConfigSettings =
-        new RemoteConfigSettings(debugMode: properties['inDebugMode']);
+        RemoteConfigSettings(debugMode: properties['inDebugMode']);
     instance._remoteConfigSettings = remoteConfigSettings;
     instance._parameters =
         _parseRemoteConfigParameters(parameters: properties['parameters']);
@@ -60,7 +62,7 @@ class RemoteConfig extends ChangeNotifier {
     parameters.forEach((dynamic key, dynamic value) {
       final ValueSource valueSource = _parseValueSource(value['source']);
       final RemoteConfigValue remoteConfigValue =
-          new RemoteConfigValue._(value['value'].cast<int>(), valueSource);
+          RemoteConfigValue._(value['value'].cast<int>(), valueSource);
       parsedParameters[key] = remoteConfigValue;
     });
     return parsedParameters;
@@ -100,6 +102,9 @@ class RemoteConfig extends ChangeNotifier {
   Future<void> setConfigSettings(
       RemoteConfigSettings remoteConfigSettings) async {
     await channel
+        // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+        // https://github.com/flutter/flutter/issues/26431
+        // ignore: strong_mode_implicit_dynamic_method
         .invokeMethod('RemoteConfig#setConfigSettings', <String, dynamic>{
       'debugMode': remoteConfigSettings.debugMode,
     });
@@ -114,21 +119,24 @@ class RemoteConfig extends ChangeNotifier {
   /// Expiration must be defined in seconds.
   Future<void> fetch({Duration expiration = const Duration(hours: 12)}) async {
     try {
+      // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+      // https://github.com/flutter/flutter/issues/26431
+      // ignore: strong_mode_implicit_dynamic_method
       final Map<dynamic, dynamic> properties = await channel.invokeMethod(
           'RemoteConfig#fetch',
           <dynamic, dynamic>{'expiration': expiration.inSeconds});
       _lastFetchTime =
-          new DateTime.fromMillisecondsSinceEpoch(properties['lastFetchTime']);
+          DateTime.fromMillisecondsSinceEpoch(properties['lastFetchTime']);
       _lastFetchStatus = _parseLastFetchStatus(properties['lastFetchStatus']);
     } on PlatformException catch (e) {
       _lastFetchTime =
-          new DateTime.fromMillisecondsSinceEpoch(e.details['lastFetchTime']);
+          DateTime.fromMillisecondsSinceEpoch(e.details['lastFetchTime']);
       _lastFetchStatus = _parseLastFetchStatus(e.details['lastFetchStatus']);
       if (e.code == 'fetchFailedThrottled') {
         final int fetchThrottleEnd = e.details['fetchThrottledEnd'];
-        throw new FetchThrottledException._(endTimeInMills: fetchThrottleEnd);
+        throw FetchThrottledException._(endTimeInMills: fetchThrottleEnd);
       } else {
-        throw new Exception('Unable to fetch remote config');
+        throw Exception('Unable to fetch remote config');
       }
     }
   }
@@ -139,6 +147,9 @@ class RemoteConfig extends ChangeNotifier {
   /// from the currently activated config, it contains false otherwise.
   Future<bool> activateFetched() async {
     final Map<dynamic, dynamic> properties =
+        // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+        // https://github.com/flutter/flutter/issues/26431
+        // ignore: strong_mode_implicit_dynamic_method
         await channel.invokeMethod('RemoteConfig#activate');
     final Map<dynamic, dynamic> rawParameters = properties['parameters'];
     final bool newConfig = properties['newConfig'];
@@ -158,13 +169,16 @@ class RemoteConfig extends ChangeNotifier {
     defaults.forEach((String key, dynamic value) {
       if (!_parameters.containsKey(key)) {
         final ValueSource valueSource = ValueSource.valueDefault;
-        final RemoteConfigValue remoteConfigValue = new RemoteConfigValue._(
+        final RemoteConfigValue remoteConfigValue = RemoteConfigValue._(
           const Utf8Codec().encode(value.toString()),
           valueSource,
         );
         _parameters[key] = remoteConfigValue;
       }
     });
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     await channel.invokeMethod(
         'RemoteConfig#setDefaults', <String, dynamic>{'defaults': defaults});
   }
@@ -225,7 +239,7 @@ class RemoteConfig extends ChangeNotifier {
     if (_parameters.containsKey(key)) {
       return _parameters[key];
     } else {
-      return new RemoteConfigValue._(null, ValueSource.valueStatic);
+      return RemoteConfigValue._(null, ValueSource.valueStatic);
     }
   }
 }

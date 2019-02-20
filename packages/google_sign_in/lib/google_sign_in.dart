@@ -16,9 +16,9 @@ export 'widgets.dart';
 enum SignInOption { standard, games }
 
 class GoogleSignInAuthentication {
-  final Map<dynamic, dynamic> _data;
-
   GoogleSignInAuthentication._(this._data);
+
+  final Map<dynamic, dynamic> _data;
 
   /// An OpenID Connect ID token that identifies the user.
   String get idToken => _data['idToken'];
@@ -40,6 +40,14 @@ class GoogleSignInAccount implements GoogleIdentity {
     assert(id != null);
   }
 
+  // These error codes must match with ones declared on Android and iOS sides.
+
+  /// Error code indicating there was a failed attempt to recover user authentication.
+  static const String kFailedToRecoverAuthError = 'failed_to_recover_auth';
+
+  /// Error indicating that authentication can be recovered with user action;
+  static const String kUserRecoverableAuthError = 'user_recoverable_auth';
+
   @override
   final String displayName;
 
@@ -55,22 +63,38 @@ class GoogleSignInAccount implements GoogleIdentity {
   final String _idToken;
   final GoogleSignIn _googleSignIn;
 
+  /// Retrieve [GoogleSignInAuthentication] for this account.
+  ///
+  /// [shouldRecoverAuth] sets whether to attempt to recover authentication if
+  /// user action is needed. If an attempt to recover authentication fails a
+  /// [PlatformException] is thrown with possible error code
+  /// [kFailedToRecoverAuthError].
+  ///
+  /// Otherwise, if [shouldRecoverAuth] is false and the authentication can be
+  /// recovered by user action a [PlatformException] is thrown with error code
+  /// [kUserRecoverableAuthError].
   Future<GoogleSignInAuthentication> get authentication async {
     if (_googleSignIn.currentUser != this) {
-      throw new StateError('User is no longer signed in.');
+      throw StateError('User is no longer signed in.');
     }
 
     final Map<dynamic, dynamic> response =
+        // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+        // https://github.com/flutter/flutter/issues/26431
+        // ignore: strong_mode_implicit_dynamic_method
         await GoogleSignIn.channel.invokeMethod(
       'getTokens',
-      <String, dynamic>{'email': email},
+      <String, dynamic>{
+        'email': email,
+        'shouldRecoverAuth': true,
+      },
     );
     // On Android, there isn't an API for refreshing the idToken, so re-use
     // the one we obtained on login.
     if (response['idToken'] == null) {
       response['idToken'] = _idToken;
     }
-    return new GoogleSignInAuthentication._(response);
+    return GoogleSignInAuthentication._(response);
   }
 
   Future<Map<String, String>> get authHeaders async {
@@ -79,6 +103,21 @@ class GoogleSignInAccount implements GoogleIdentity {
       "Authorization": "Bearer $token",
       "X-Goog-AuthUser": "0",
     };
+  }
+
+  /// Clears any client side cache that might be holding invalid tokens.
+  ///
+  /// If client runs into 401 errors using a token, it is expected to call
+  /// this method and grab `authHeaders` once again.
+  Future<void> clearAuthCache() async {
+    final String token = (await authentication).accessToken;
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
+    await GoogleSignIn.channel.invokeMethod(
+      'clearAuthCache',
+      <String, dynamic>{'token': token},
+    );
   }
 
   @override
@@ -110,6 +149,36 @@ class GoogleSignInAccount implements GoogleIdentity {
 
 /// GoogleSignIn allows you to authenticate Google users.
 class GoogleSignIn {
+  /// Initializes global sign-in configuration settings.
+  ///
+  /// The [signInOption] determines the user experience. [SigninOption.games]
+  /// must not be used on iOS.
+  ///
+  /// The list of [scopes] are OAuth scope codes to request when signing in.
+  /// These scope codes will determine the level of data access that is granted
+  /// to your application by the user. The full list of available scopes can
+  /// be found here:
+  /// <https://developers.google.com/identity/protocols/googlescopes>
+  ///
+  /// The [hostedDomain] argument specifies a hosted domain restriction. By
+  /// setting this, sign in will be restricted to accounts of the user in the
+  /// specified domain. By default, the list of accounts will not be restricted.
+  GoogleSignIn({this.signInOption, this.scopes, this.hostedDomain});
+
+  /// Factory for creating default sign in user experience.
+  factory GoogleSignIn.standard({List<String> scopes, String hostedDomain}) {
+    return GoogleSignIn(
+        signInOption: SignInOption.standard,
+        scopes: scopes,
+        hostedDomain: hostedDomain);
+  }
+
+  /// Factory for creating sign in suitable for games. This option must not be
+  /// used on iOS because the games API is not supported.
+  factory GoogleSignIn.games() {
+    return GoogleSignIn(signInOption: SignInOption.games);
+  }
+
   // These error codes must match with ones declared on Android and iOS sides.
 
   /// Error code indicating there is no signed in user and interactive sign in
@@ -138,38 +207,8 @@ class GoogleSignIn {
   /// Domain to restrict sign-in to.
   final String hostedDomain;
 
-  /// Initializes global sign-in configuration settings.
-  ///
-  /// The [signInOption] determines the user experience. [SigninOption.games]
-  /// must not be used on iOS.
-  ///
-  /// The list of [scopes] are OAuth scope codes to request when signing in.
-  /// These scope codes will determine the level of data access that is granted
-  /// to your application by the user. The full list of available scopes can
-  /// be found here:
-  /// <https://developers.google.com/identity/protocols/googlescopes>
-  ///
-  /// The [hostedDomain] argument specifies a hosted domain restriction. By
-  /// setting this, sign in will be restricted to accounts of the user in the
-  /// specified domain. By default, the list of accounts will not be restricted.
-  GoogleSignIn({this.signInOption, this.scopes, this.hostedDomain});
-
-  /// Factory for creating default sign in user experience.
-  factory GoogleSignIn.standard({List<String> scopes, String hostedDomain}) {
-    return new GoogleSignIn(
-        signInOption: SignInOption.standard,
-        scopes: scopes,
-        hostedDomain: hostedDomain);
-  }
-
-  /// Factory for creating sign in suitable for games. This option must not be
-  /// used on iOS because the games API is not supported.
-  factory GoogleSignIn.games() {
-    return new GoogleSignIn(signInOption: SignInOption.games);
-  }
-
   StreamController<GoogleSignInAccount> _currentUserController =
-      new StreamController<GoogleSignInAccount>.broadcast();
+      StreamController<GoogleSignInAccount>.broadcast();
 
   /// Subscribe to this stream to be notified when the current user changes.
   Stream<GoogleSignInAccount> get onCurrentUserChanged =>
@@ -181,9 +220,12 @@ class GoogleSignIn {
   Future<GoogleSignInAccount> _callMethod(String method) async {
     await _ensureInitialized();
 
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     final Map<dynamic, dynamic> response = await channel.invokeMethod(method);
     return _setCurrentUser(response != null && response.isNotEmpty
-        ? new GoogleSignInAccount._(this, response)
+        ? GoogleSignInAccount._(this, response)
         : null);
   }
 
@@ -197,6 +239,9 @@ class GoogleSignIn {
 
   Future<void> _ensureInitialized() {
     if (_initialization == null) {
+      // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+      // https://github.com/flutter/flutter/issues/26431
+      // ignore: strong_mode_implicit_dynamic_method
       _initialization = channel.invokeMethod('init', <String, dynamic>{
         'signInOption': (signInOption ?? SignInOption.standard).toString(),
         'scopes': scopes ?? <String>[],
@@ -219,12 +264,12 @@ class GoogleSignIn {
   /// updates to [currentUser] and [onCurrentUserChanged].
   Future<GoogleSignInAccount> _addMethodCall(String method) {
     if (_lastMethodCompleter == null) {
-      _lastMethodCompleter = new _MethodCompleter(method)
+      _lastMethodCompleter = _MethodCompleter(method)
         ..complete(_callMethod(method));
       return _lastMethodCompleter.future;
     }
 
-    final _MethodCompleter completer = new _MethodCompleter(method);
+    final _MethodCompleter completer = _MethodCompleter(method);
     _lastMethodCompleter.future.whenComplete(() {
       // If after the last completed call currentUser is not null and requested
       // method is a sign in method, re-use the same authenticated user
@@ -273,6 +318,9 @@ class GoogleSignIn {
   /// Returns a future that resolves to whether a user is currently signed in.
   Future<bool> isSignedIn() async {
     await _ensureInitialized();
+    // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+    // https://github.com/flutter/flutter/issues/26431
+    // ignore: strong_mode_implicit_dynamic_method
     final bool result = await channel.invokeMethod('isSignedIn');
     return result;
   }
@@ -303,11 +351,11 @@ class GoogleSignIn {
 }
 
 class _MethodCompleter {
+  _MethodCompleter(this.method);
+
   final String method;
   final Completer<GoogleSignInAccount> _completer =
-      new Completer<GoogleSignInAccount>();
-
-  _MethodCompleter(this.method);
+      Completer<GoogleSignInAccount>();
 
   void complete(FutureOr<GoogleSignInAccount> value) {
     if (value is Future<GoogleSignInAccount>) {
