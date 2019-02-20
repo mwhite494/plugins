@@ -236,7 +236,7 @@ class VideoPlayerController extends ValueNotifier<VideoPlayerValue> {
             size: Size(map['width']?.toDouble() ?? 0.0,
                 map['height']?.toDouble() ?? 0.0),
           );
-          initializingCompleter.complete(null);
+          if (!initializingCompleter.isCompleted) initializingCompleter.complete(null);
           _applyLooping();
           _applyVolume();
           _applyPlayPause();
