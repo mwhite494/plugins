@@ -196,7 +196,11 @@ class CameraValue {
 ///
 /// To show the camera preview on the screen use a [CameraPreview] widget.
 class CameraController extends ValueNotifier<CameraValue> {
-  CameraController(this.description, this.resolutionPreset)
+  CameraController(this.description, this.resolutionPreset,
+      {this.preferredAspectRatio: 0.0,
+      this.videoEncodingBitRate: 1024 * 1000,
+      this.videoFrameRate: 27,
+      this.audioSamplingRate: 16000})
       : super(const CameraValue.uninitialized());
 
   final CameraDescription description;
