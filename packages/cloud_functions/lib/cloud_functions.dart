@@ -8,11 +8,11 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
 
 class CloudFunctionsException implements Exception {
+  CloudFunctionsException._(this.code, this.message, this.details);
+
   final String code;
   final String message;
   final dynamic details;
-
-  CloudFunctionsException._(this.code, this.message, this.details);
 }
 
 /// The entry point for accessing a CloudFunctions.
@@ -20,9 +20,9 @@ class CloudFunctionsException implements Exception {
 /// You can get an instance by calling [CloudFunctions.instance].
 class CloudFunctions {
   @visibleForTesting
-  static const MethodChannel channel = const MethodChannel('cloud_functions');
+  static const MethodChannel channel = MethodChannel('cloud_functions');
 
-  static CloudFunctions _instance = new CloudFunctions();
+  static CloudFunctions _instance = CloudFunctions();
 
   static CloudFunctions get instance => _instance;
 
@@ -34,6 +34,9 @@ class CloudFunctions {
       {@required String functionName, Map<String, dynamic> parameters}) async {
     try {
       final dynamic response =
+          // TODO(amirh): remove this on when the invokeMethod update makes it to stable Flutter.
+          // https://github.com/flutter/flutter/issues/26431
+          // ignore: strong_mode_implicit_dynamic_method
           await channel.invokeMethod('CloudFunctions#call', <String, dynamic>{
         'functionName': functionName,
         'parameters': parameters,
