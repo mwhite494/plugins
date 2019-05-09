@@ -147,7 +147,7 @@ public class CameraPlugin implements MethodCallHandler {
           if (camera != null) {
             camera.close();
           }
-          camera = new Camera(cameraName, resolutionPreset, result);
+          camera = new Camera(cameraName, resolutionPreset, preferredAspectRatio, videoEncodingBitRate, videoFrameRate, audioSamplingRate, result);
           orientationEventListener.enable();
           break;
         }
@@ -753,7 +753,7 @@ public class CameraPlugin implements MethodCallHandler {
                     videoDuration = trackBox.getTrackHeaderBox().getDuration();
                 }
             }
-            
+
             if (audioTrack != null && videoTrack != null) {
                 int numAudioSamples = audioTrack.getSamples().size();
                 long audioSampleLength = audioDuration/numAudioSamples;
