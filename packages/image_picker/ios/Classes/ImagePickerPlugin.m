@@ -4,6 +4,7 @@
 
 #import "ImagePickerPlugin.h"
 
+#import <AVFoundation/AVFoundation.h>
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <Photos/Photos.h>
 #import <UIKit/UIKit.h>
@@ -36,7 +37,6 @@ static const int SOURCE_GALLERY = 1;
   self = [super init];
   if (self) {
     _viewController = viewController;
-    _imagePickerController = [[UIImagePickerController alloc] init];
   }
   return self;
 }
@@ -50,6 +50,7 @@ static const int SOURCE_GALLERY = 1;
   }
 
   if ([@"pickImage" isEqualToString:call.method]) {
+    _imagePickerController = [[UIImagePickerController alloc] init];
     _imagePickerController.modalPresentationStyle = UIModalPresentationCurrentContext;
     _imagePickerController.delegate = self;
     _imagePickerController.mediaTypes = @[ (NSString *)kUTTypeImage ];
@@ -61,7 +62,7 @@ static const int SOURCE_GALLERY = 1;
 
     switch (imageSource) {
       case SOURCE_CAMERA:
-        [self showCamera];
+        [self checkAuthorization];
         break;
       case SOURCE_GALLERY:
         [self showPhotoLibrary];
@@ -98,6 +99,7 @@ static const int SOURCE_GALLERY = 1;
           // Flutter minimum requirement is iOS 8.0, this should never happen
       }
   } else if ([@"pickVideo" isEqualToString:call.method]) {
+    _imagePickerController = [[UIImagePickerController alloc] init];
     _imagePickerController.modalPresentationStyle = UIModalPresentationCurrentContext;
     _imagePickerController.delegate = self;
     _imagePickerController.mediaTypes = @[
@@ -113,7 +115,7 @@ static const int SOURCE_GALLERY = 1;
 
     switch (imageSource) {
       case SOURCE_CAMERA:
-        [self showCamera];
+        [self checkAuthorization];
         break;
       case SOURCE_GALLERY:
         [self showPhotoLibrary];
@@ -153,6 +155,11 @@ static const int SOURCE_GALLERY = 1;
 }
 
 - (void)showCamera {
+  @synchronized(self) {
+    if (_imagePickerController.beingPresented) {
+      return;
+    }
+  }
   // Camera is not available on simulators
   if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
     _imagePickerController.sourceType = UIImagePickerControllerSourceTypeCamera;
@@ -163,6 +170,53 @@ static const int SOURCE_GALLERY = 1;
                                delegate:nil
                       cancelButtonTitle:@"OK"
                       otherButtonTitles:nil] show];
+  }
+}
+
+- (void)checkAuthorization {
+  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+
+  switch (status) {
+    case AVAuthorizationStatusAuthorized:
+      [self showCamera];
+      break;
+    case AVAuthorizationStatusNotDetermined: {
+      [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo
+                               completionHandler:^(BOOL granted) {
+                                 if (granted) {
+                                   dispatch_async(dispatch_get_main_queue(), ^{
+                                     if (granted) {
+                                       [self showCamera];
+                                     }
+                                   });
+                                 } else {
+                                   dispatch_async(dispatch_get_main_queue(), ^{
+                                     [self errorNoAccess:AVAuthorizationStatusDenied];
+                                   });
+                                 }
+                               }];
+    }; break;
+    case AVAuthorizationStatusDenied:
+    case AVAuthorizationStatusRestricted:
+    default:
+      [self errorNoAccess:status];
+      break;
+  }
+}
+
+- (void)errorNoAccess:(AVAuthorizationStatus)status {
+  switch (status) {
+    case AVAuthorizationStatusRestricted:
+      _result([FlutterError errorWithCode:@"camera_access_restricted"
+                                  message:@"The user is not allowed to use the camera."
+                                  details:nil]);
+      break;
+    case AVAuthorizationStatusDenied:
+    default:
+      _result([FlutterError errorWithCode:@"camera_access_denied"
+                                  message:@"The user did not allow camera access."
+                                  details:nil]);
+      break;
   }
 }
 
@@ -306,6 +360,13 @@ static const int SOURCE_GALLERY = 1;
   UIGraphicsEndImageContext();
 
   return scaledImage;
+}
+
+// Returns true if the image has an alpha layer
+- (BOOL)hasAlpha:(UIImage *)image {
+  CGImageAlphaInfo alpha = CGImageGetAlphaInfo(image.CGImage);
+  return (alpha == kCGImageAlphaFirst || alpha == kCGImageAlphaLast ||
+          alpha == kCGImageAlphaPremultipliedFirst || alpha == kCGImageAlphaPremultipliedLast);
 }
 
 @end
